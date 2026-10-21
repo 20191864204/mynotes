@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>每日记事本</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #f5f7fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #333;
+      padding: 15px;
+      padding-bottom: 50px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* 统计汇总面板样式 */
+    .summary-card {
+      background: linear-gradient(135deg, #1E88E5, #1565C0);
+      color: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(30, 136, 229, 0.2);
+      margin-bottom: 15px;
+    }
+    .summary-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      opacity: 0.9;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 8px;
+    }
+    .summary-item {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .summary-num {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .summary-label {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    /* 日历卡片样式 */
+    .calendar-card {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #333;
+    }
+    .cal-btn {
+      background: #f0f0f0;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #333;
+    }
+    .cal-btn:active {
+      background: #e0e0e0;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #333;
+      position: relative;
+    }
+    .cal-day:hover {
+      background-color: #f0f7ff;
+    }
+    .cal-day.other-month {
+      color: #ccc;
+    }
+    .cal-day.today {
+      border: 1px solid #1E88E5;
+      color: #1E88E5;
+      font-weight: bold;
+    }
+    .cal-day.selected {
+      background-color: #1E88E5 !important;
+      color: white !important;
+      font-weight: bold;
+    }
+    .has-note::after {
+      content: '';
+      position: absolute;
+      bottom: 3px;
+      width: 4px;
+      height: 4px;
+      background-color: #1E88E5;
+      border-radius: 50%;
+    }
+    .cal-day.selected.has-note::after {
+      background-color: white;
+    }
+
+    /* 当前选中日期提示 */
+    .header-date {
+      font-size: 14px;
+      font-weight: bold;
+      color: #1E88E5;
+      margin-bottom: 12px;
+      text-align: center;
+      background: #e3f2fd;
+      padding: 8px;
+      border-radius: 8px;
+    }
+
+    /* 输入卡片样式 */
+    .input-card {
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .input-box {
+      width: 100%;
+      height: 90px;
+      font-size: 14px;
+      color: #333;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-box:focus {
+      border-color: #1E88E5;
+    }
+    .action-row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+      margin-top: 10px;
+    }
+    .category-radio {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .radio-label {
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f8f9fa;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .add-btn {
+      background-color: #1E88E5;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .add-btn:active {
+      opacity: 0.8;
+    }
+    
+    /* 分区容器 */
+    .sections-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .section-box {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: bold;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #f0f0f0;
+      margin-bottom: 12px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-count-badge {
+      font-size: 12px;
+      background: #e3f2fd;
+      color: #1E88E5;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    
+    /* 记事条目样式 */
+    .note-item {
+      background: #fafafa;
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .note-text {
+      font-size: 14px;
+      color: #333;
+      word-break: break-all;
+      display: block;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .note-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .note-time {
+      font-size: 12px;
+      color: #999;
+    }
+    .delete-btn {
+      font-size: 12px;
+      color: #e53935;
+      cursor: pointer;
+    }
+    .empty-tip {
+      text-align: center;
+      font-size: 13px;
+      color: #aaa;
+      padding: 15px 0;
+    }
+
+    /* 设置模块样式 */
+    .settings-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border-left: 4px solid #757575;
+    }
+    .settings-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .settings-row {
+      display: flex;
+      gap: 10px;
+    }
+    .settings-input {
+      flex: 1;
+      padding: 8px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      outline: none;
+    }
+    .settings-btn {
+      background-color: #43A047;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .module-manage-list {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .module-tag {
+      background: #f1f3f4;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .module-tag span {
+      cursor: pointer;
+      color: #e53935;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 📊 总数汇总统计面板 -->
+  <div class="summary-card">
+    <div class="summary-title">📊 历史事项总数汇总统计</div>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+
+  <!-- 日历组件 -->
+  <div class="calendar-card">
+    <div class="calendar-header">
+      <button class="cal-btn" onclick="changeMonth(-1)">◀ 上月</button>
+      <span id="calendarTitle">加载中...</span>
+      <button class="cal-btn" onclick="changeMonth(1)">下月 ▶</button>
+    </div>
+    <div class="calendar-weekdays">
+      <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- 当前选中日期展示 -->
+  <div class="header-date" id="currentDateTip">📅 当前选中的日期：加载中...</div>
+
+  <!-- 输入区域 -->
+  <div class="input-card">
+    <textarea 
+      id="inputBox" 
+      class="input-box" 
+      placeholder="请输入当前选中板块的内容..."
+    ></textarea>
+    
+    <div class="action-row">
+      <!-- 动态分类单选框 -->
+      <div class="category-radio" id="categoryRadios"></div>
+      
+      <div class="btn-row">
+        <button class="add-btn" onclick="addNote()">添加记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内容展示动态容器 -->
+  <div class="sections-container" id="sectionsContainer"></div>
+
+  <!-- 设置模块：自定义增加新模块 -->
+  <div class="settings-card">
+    <div class="settings-title">⚙️ 模块自定义设置</div>
+    <div class="settings-row">
+      <input type="text" id="newModuleName" class="settings-input" placeholder="输入新需求模块名称（如：学习、健身）">
+      <button class="settings-btn" onclick="addNewModule()">新增模块</button>
+    </div>
+    <div class="module-manage-list" id="moduleManageList"></div>
+  </div>
+
+</div>
+
+<script>
+  // 基础数据安全初始化
+  let customModules = [];
+  try {
+    customModules = JSON.parse(localStorage.getItem('customModules')) || [];
+  } catch (e) {
+    customModules = [];
+  }
+  
+  if (!Array.isArray(customModules) || customModules.length === 0) {
+    customModules = [
+      { id: 'work', name: '工作记录' },
+      { id: 'life', name: '日常生活' }
+    ];
+  }
+
+  let allNotes = {};
+  try {
+    allNotes = JSON.parse(localStorage.getItem('allNotes')) || {};
+  } catch (e) {
+    allNotes = {};
+  }
+
+  let selectedDateStr = getFormattedDate(new Date());
+  let currentCalYear = new Date().getFullYear();
+  let currentCalMonth = new Date().getMonth();
+  let currentCategory = customModules.length > 0 ? customModules[0].id : '';
+
+  window.onload = function() {
+    try {
+      renderSummary();
+      renderCalendar();
+      updateDateTip();
+      renderCategories();
+      renderSections();
+      renderModuleSettings();
+    } catch (err) {
+      console.error("渲染出错：", err);
+    }
+  };
+
+  function getFormattedDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function changeMonth(direction) {
+    currentCalMonth += direction;
+    if (currentCalMonth > 11) {
+      currentCalMonth = 0;
+      currentCalYear++;
+    } else if (currentCalMonth < 0) {
+      currentCalMonth = 11;
+      currentCalYear--;
+    }
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const titleEl = document.getElementById('calendarTitle');
+    const gridEl = document.getElementById('calendarGrid');
+    if (!titleEl || !gridEl) return;
+
+    titleEl.innerText = `${currentCalYear}年${currentCalMonth + 1}月`;
+
+    const firstDayIndex = new Date(currentCalYear, currentCalMonth, 1).getDay();
+    const totalDays = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+    const prevTotalDays = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+    const todayStr = getFormattedDate(new Date());
+    let html = '';
+
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      html += `<div class="cal-day other-month">${prevTotalDays - i}</div>`;
+    }
+
+    for (let i = 1; i <= totalDays; i++) {
+      const mStr = String(currentCalMonth + 1).padStart(2, '0');
+      const dStr = String(i).padStart(2, '0');
+      const dateStr = `${currentCalYear}-${mStr}-${dStr}`;
+
+      let classes = ['cal-day'];
+      if (dateStr === todayStr) classes.push('today');
+      if (dateStr === selectedDateStr) classes.push('selected');
+      
+      const dayData = allNotes[dateStr] || {};
+      let hasAnyContent = false;
+      for (let mod of customModules) {
+        if (dayData[mod.id] && Array.isArray(dayData[mod.id]) && dayData[mod.id].length > 0) {
+          hasAnyContent = true;
+          break;
+        }
+      }
+      if (hasAnyContent) classes.push('has-note');
+
+      html += `<div class="${classes.join(' ')}" onclick="selectDate('${dateStr}')">${i}</div>`;
+    }
+
+    const remainingCells = 42 - (firstDayIndex + totalDays);
+    for (let i = 1; i <= remainingCells; i++) {
+      html += `<div class="cal-day other-month">${i}</div>`;
+    }
+
+    gridEl.innerHTML = html;
+  }
+
+  function selectDate(dateStr) {
+    selectedDateStr = dateStr;
+    renderCalendar();
+    updateDateTip();
+    renderSections();
+  }
+
+  function updateDateTip() {
+    const parts = selectedDateStr.split('-');
+    const tipEl = document.getElementById('currentDateTip');
+    if (tipEl) {
+      tipEl.innerText = `📅 当前选中的日期：${parts[0]}年${Number(parts[1])}月${Number(parts[2])}日`;
+    }
+  }
+
+  function renderSummary() {
+    const summaryGrid = document.getElementById('summaryGrid');
+    if (!summaryGrid) return;
+
+    let moduleCounts = {};
+    let grandTotal = 0;
+
+    customModules.forEach(mod => {
+      moduleCounts[mod.id] = 0;
+    });
+
+    for (let dateKey in allNotes) {
+      const dayObj = allNotes[dateKey];
+      if (dayObj && typeof dayObj === 'object') {
+        for (let modId in dayObj) {
+          if (Array.isArray(dayObj[modId])) {
+            const count = dayObj[modId].length;
+            if (moduleCounts[modId] !== undefined) {
+              moduleCounts[modId] += count;
+            }
+            grandTotal += count;
+          }
+        }
+      }
+    }
+
+    let html = `
+      <div class="summary-item">
+        <div class="summary-num">${grandTotal}</div>
+        <div class="summary-label">总计事项</div>
+      </div>
+    `;
+
+    customModules.forEach(mod => {
+      html += `
+        <div class="summary-item">
+          <div class="summary-num">${moduleCounts[mod.id] || 0}</div>
+          <div class="summary-label">${mod.name}</div>
+        </div>
+      `;
+    });
+
+    summaryGrid.innerHTML = html;
+  }
+
+  function renderCategories() {
+    const container = document.getElementById('categoryRadios');
+    if (!container) return;
+
+    if (customModules.length === 0) {
+      container.innerHTML = '<span style="font-size:12px; color:#999;">请先在下方设置中添加模块</span>';
+      return;
+    }
+
+    if (!customModules.some(m => m.id === currentCategory)) {
+      currentCategory = customModules[0].id;
+    }
+
+    container.innerHTML = customModules.map(mod => `
+      <label class="radio-label">
+        <input type="radio" name="category" value="${mod.id}" ${mod.id === currentCategory ? 'checked' : ''} onchange="changeCategory('${mod.id}')"> ${mod.name}
+      </label>
+    `).join('');
+  }
+
+  function changeCategory(id) {
+    currentCategory = id;
+  }
+
+  function addNote() {
+    const inputBox = document.getElementById('inputBox');
+    if (!inputBox) return;
+    const content = inputBox.value.trim();
+    
+    if (!content) {
+      alert('请输入内容');
+      return;
+    }
+
+    if (!currentCategory) {
+      alert('请先选择一个记录板块');
+      return;
+    }
+
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    const newNote = {
+      id: Date.now(),
+      content: content,
+      time: `${hours}:${minutes}`
+    };
+
+    if (!allNotes[selectedDateStr]) {
+      allNotes[selectedDateStr] = {};
+    }
+    if (!allNotes[selectedDateStr][currentCategory]) {
+      allNotes[selectedDateStr][currentCategory] = [];
+    }
+
+    allNotes[selectedDateStr][currentCategory].unshift(newNote);
+    localStorage.setItem('allNotes', JSON.stringify(allNotes));
+
+    inputBox.value = '';
+    renderSummary();
+    renderCalendar();
+    renderSections();
+  }
+
+  function deleteNote(modId, id) {
+    if (confirm('确定要删除这条记录吗？')) {
+      if (allNotes[selectedDateStr] && allNotes[selectedDateStr][modId]) {
+        allNotes[selectedDateStr][modId] = allNotes[selectedDateStr][modId].filter(item => item.id !== id);
+        localStorage.setItem('allNotes', JSON.stringify(allNotes));
+        renderSummary();
+        renderCalendar();
+        renderSections();
+      }
+    }
+  }
+
+  function renderSections() {
+    const container = document.getElementById('sectionsContainer');
+    if (!container) return;
+
+    const dayData = allNotes[selectedDateStr] || {};
+
+    if (customModules.length === 0) {
+      container.innerHTML = '<div class="empty-tip">暂无任何模块，请在下方设置中新增</div>';
+      return;
+    }
+
+    container.innerHTML = customModules.map(mod => {
+      const notes = (dayData[mod.id] && Array.isArray(dayData[mod.id])) ? dayData[mod.id] : [];
+      const listHtml = notes.length === 0 
+        ? '<div class="empty-tip">当天暂无记录</div>'
+        : notes.map(item => `
+            <div class="note-item">
+              <span class="note-text">${escapeHtml(item.content)}</span>
+              <div class="note-footer">
+                <span class="note-time">${item.time}</span>
+                <span class="delete-btn" onclick="deleteNote('${mod.id}', ${item.id})">删除</span>
+              </div>
+            </div>
+          `).join('');
+
+      return `
+        <div class="section-box">
+          <div class="section-title">
+            <span>📌 ${mod.name}</span>
+            <span class="section-count-badge">今日: ${notes.length} 条</span>
+          </div>
+          <div>${listHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderModuleSettings() {
+    const manageList = document.getElementById('moduleManageList');
+    if (!manageList) return;
+
+    manageList.innerHTML = customModules.map(mod => `
+      <div class="module-tag">
+        ${mod.name} 
+        ${customModules.length > 1 ? `<span onclick="deleteModule('${mod.id}')" title="删除此模块">×</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function addNewModule() {
+    const input = document.getElementById('newModuleName');
+    if (!input) return;
+    const name = input.value.trim();
+
+    if (!name) {
+      alert('请输入模块名称');
+      return;
+    }
+
+    const id = 'mod_' + Date.now();
+    customModules.push({ id, name });
+    
+    localStorage.setItem('customModules', JSON.stringify(customModules));
+    input.value = '';
+
+    renderSummary();
+    renderCategories();
+    renderSections();
+    renderModuleSettings();
+    alert(`成功新增模块：[${name}]！`);
+  }
+
+  function deleteModule(id) {
+    if (customModules.length <= 1) {
+      alert('至少需要保留一个模块！');
+      return;
+    }
+
+    if (confirm('删除模块后，该模块的历史记录将不再显示，确定删除吗？')) {
+      customModules = customModules.filter(m => m.id !== id);
+      localStorage.setItem('customModules', JSON.stringify(customModules));
+
+      renderSummary();
+      renderCategories();
+      renderSections();
+      renderModuleSettings();
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+  }
+</script>
+
+</body>
+</html>
